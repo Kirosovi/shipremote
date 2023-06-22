@@ -1,0 +1,75 @@
+-- INSTRUCTIONS: (Code omitted for brevity)
+
+channel = tonumber(...)
+if channel == nil then
+    print("Please specify a channel to communicate on")
+    os.exit()
+end
+
+modem = peripheral.find("modem")
+reader = peripheral.find("ship_reader")
+helm = peripheral.find("ship_helm")
+
+if modem == nil or reader == nil or helm == nil then
+    print("Required peripherals not found")
+    os.exit()
+end
+
+playerX = 0
+playerY = 0
+playerZ = 0
+
+-- Rest of the code...
+
+function getIdealYaw()
+    shipX, shipY, shipZ = reader.getWorldspacePosition()
+    idealYaw = math.atan2(shipX - playerX, shipZ - playerZ)
+    return idealYaw
+end
+
+-- Rest of the code...
+
+function rotateShip()
+    idealYaw = getIdealYaw()
+    print("idealYaw: " .. idealYaw * (180 / math.pi))
+    facing = false
+    while not facing do
+        shipYaw = getYaw()
+        sleep(0)
+        if shipYaw > idealYaw - 0.2 and shipYaw < idealYaw + 0.2 then
+            print("shipYaw: " .. shipYaw * (180 / math.pi))
+            facing = true
+        else
+            helm.impulseRight(1)
+        end
+    end
+end
+
+-- Rest of the code...
+
+while true do
+    print("Listening for messages...")
+    local event, modemSide, senderChannel,
+        replyChannel, message,
+        senderDistance = os.pullEvent("modem_message")
+    if senderChannel == channel then
+        print("------")
+        print("Received Message!")
+        print("Sender channel: " .. senderChannel)
+        print("Reply channel: " .. replyChannel)
+        print("Message contents: " .. message)
+        print("Sender distance: " .. senderDistance .. " blocks away")
+        print(" ")
+
+        if string.find(message, "comeHither") ~= nil then
+            print("Correctly formatted message! Navigating to coordinates...")
+            navigateShip(message)
+            modem.transmit(replyChannel, channel, "Ship moved to coordinates")
+            print("Navigation ended.")
+        else
+            print("Incorrectly formatted message. Sending reply...")
+            modem.transmit(replyChannel, channel, "Incorrect message format. Ship recall message should look as follows:\n \"comeHither, x:xCoord y:yCoord z:zCoord playerName:playerName\"")
+        end
+        print("------")
+    end
+end
